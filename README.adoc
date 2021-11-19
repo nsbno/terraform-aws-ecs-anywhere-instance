@@ -3,7 +3,70 @@
 :!toc-placement:
 :toc:
 
-[Abstract]
+[abstract]
 Register an on-premise instance for use in an AWS ECS Cluster
 
 toc::[]
+
+== About
+
+Need some workloads to run on-premise instead of in the cloud?
+Then this is most likely your solution.
+This module allows you to get your on-premise servers ready to use with ECS.
+
+Do note that this assumes that you're on RHEL 7 (though most Vy hosts are).
+
+== Examples
+
+The link:examples/[examples directory] has multiple examples to help you get going.
+
+[#_automatic_configuration]
+link:examples/configure_server/main.tf[Automatic Instance Configuration]::
+A setup where the terraform module configures your hosts.
+This requires that the host running the first terraform apply has access to on-prem.
+
+link:examples/no_configure/main.tf[Manual Instance Configuration]::
+A straight forward setup where the instances are _not_ automatically registered with ECS and SSM.
+If you use this approach, you'll have to go through xref:_manual_setup[the manual setup section].
+
+[#_manual_setup]
+== Manual Setup
+
+Some manual steps must be taken if you don't opt for the xref:_automatic_configuration[automatic configuration].
+These are the same steps that the terraform provisioner does, but done manually.
+This assumes that the server is running RHEL 7 (which all Vy hosts are).
+
+Start off by logging into the host you want to add to your AWS environment.
+[source,bash]
+----
+ssh <username>@<host>
+----
+
+Now, let's configure and install the relevant dependencies.
+This activates some extra repos from RHEL to allow us to install docker.
+
+[source,bash]
+----
+sudo subscription-manager repos \
+  --enable=rhel-7-server-rpms \
+  --enable=rhel-7-server-extras-rpms \
+  --enable=rhel-7-server-optional-rpms
+sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+----
+
+Finally, we'll do the actual installation.
+This will download docker to the host and register it with both SSM and ECS.
+You can find the activation id and code in parameter store.
+
+[source,bash]
+----
+curl --proto https -o /tmp/ecs-anywhere-install.sh 'https://raw.githubusercontent.com/aws/amazon-ecs-init/v1.53.0-1/scripts/ecs-anywhere-install.sh'
+echo '5ea39e5af247b93e77373c35530d65887857b8d14539465fa7132d33d8077c8c  /tmp/ecs-anywhere-install.sh' \
+  | sha256sum -c - \
+  || exit 1
+sudo bash /tmp/ecs-anywhere-install.sh \
+  --region '<aws-region>' \
+  --cluster '<ecs-cluster-name>' \
+  --activation-id '<activation-id-from-ssm>' \
+  --activation-code '<activation-code-from-ssm>'
+----
