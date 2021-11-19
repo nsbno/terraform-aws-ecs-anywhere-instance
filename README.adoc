@@ -1,0 +1,9 @@
+= ECS Anywhere Instance
+:!toc-title:
+:!toc-placement:
+:toc:
+
+[Abstract]
+Register an on-premise instance for use in an AWS ECS Cluster
+
+toc::[]
