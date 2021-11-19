@@ -18,17 +18,17 @@ terraform {
  * Automatically install and configure a CloudWatch agent on the instance.
  */
 module "cloudwatch_agent" {
-  for_each            = var.instance_names
+  for_each            = var.instances
 
   source              = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=3185875/modules/cloudwatch-agent"
 
   name_prefix         = var.name_prefix
   metric_namespace    = var.ecs_cluster_name
-  instance_identifier = each.value
+  instance_identifier = each.key
   instance_targets    = [
     {
       key    = "tag:instance-name"
-      values = [each.value]
+      values = [each.key]
     }
   ]
 
@@ -50,12 +50,12 @@ resource "aws_kms_alias" "ssm_activation_encryption_key_alias" {
 }
 
 module "instance" {
-  for_each      = var.instance_names
+  for_each      = var.instances
 
   source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=3185875"
 
   name_prefix   = var.name_prefix
-  instance_name = each.value
+  instance_name = each.key
   kms_arn       = aws_kms_key.ssm_activation_encryption_key.arn
 
   policy_arns   = [
@@ -67,12 +67,12 @@ module "instance" {
     {
       effect    = "Allow"
       actions   = ["ssm:GetParameter"],
-      resources = [module.cloudwatch_agent[each.value].ssm_parameter_arn]
+      resources = [module.cloudwatch_agent[each.key].ssm_parameter_arn]
     },
     {
       effect    = "Allow"
       actions   = ["logs:CreateLogStream", "logs:PutLogEvents"],
-      resources = ["${module.cloudwatch_agent[each.value].log_group_arn}:*"]
+      resources = ["${module.cloudwatch_agent[each.key].log_group_arn}:*"]
     },
     {
       effect    = "Allow"
@@ -82,13 +82,50 @@ module "instance" {
         {
           test     = "StringEquals"
           variable = "cloudwatch:namespace"
-          values   = [module.cloudwatch_agent[each.value].metric_namespace]
+          values   = [module.cloudwatch_agent[each.key].metric_namespace]
         }
       ]
     }
   ]
 
   tags = var.tags
+}
+
+data "aws_region" "current" {}
+
+data "aws_ssm_parameter" "activation_code" {
+  for_each = var.instances
+  name = module.instance[each.key].activation_code_ssm_parameter_name
+}
+
+data "aws_ssm_parameter" "activation_id" {
+  for_each = var.instances
+  name = module.instance[each.key].activation_id_ssm_parameter_name
+}
+
+resource "null_resource" "configure_instance" {
+  for_each = var.configure_instances ? var.instances : {}
+
+  connection {
+    type = "ssh"
+    user = each.value.username
+    password = each.value.password
+    host = each.value.host
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      # Get dependencies ready
+      # This assumes that we're running on RHEL 7 (which Vy hosts are).
+      "sudo subscription-manager repos --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-optional-rpms",
+      "sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm",
+
+      # Do the actual install!
+      "curl --proto https -o /tmp/ecs-anywhere-install.sh 'https://raw.githubusercontent.com/aws/amazon-ecs-init/v1.53.0-1/scripts/ecs-anywhere-install.sh'",
+      "echo '5ea39e5af247b93e77373c35530d65887857b8d14539465fa7132d33d8077c8c  /tmp/ecs-anywhere-install.sh' | sha256sum -c - || exit 1",
+      "sudo bash /tmp/ecs-anywhere-install.sh --region '${data.aws_region.current.name}' --cluster '${var.ecs_cluster_name}' --activation-id '${data.aws_ssm_parameter.activation_id[each.key].value}' --activation-code '${data.aws_ssm_parameter.activation_code[each.key].value}'"
+    ]
+  }
 }
 
 /*
@@ -126,14 +163,14 @@ resource "aws_cloudwatch_event_target" "agent" {
  * == Register Alarms for Each Instance
  */
 resource "aws_cloudwatch_metric_alarm" "ssm_agent" {
-  for_each          = var.instance_names
+  for_each          = var.instances
 
-  alarm_name        = "${module.instance[each.value].instance_name}-ssm-agent"
-  alarm_description = "Triggers if AWS has lost connection to the SSM agent on an instance named '${module.instance[each.value].instance_name}' (e.g., due to network outage, instance downtime, etc.)"
+  alarm_name        = "${module.instance[each.key].instance_name}-ssm-agent"
+  alarm_description = "Triggers if AWS has lost connection to the SSM agent on an instance named '${module.instance[each.key].instance_name}' (e.g., due to network outage, instance downtime, etc.)"
   namespace         = module.agent_connectivity.metric_namespace
   metric_name       = module.agent_connectivity.metric_names.ssm_agent_disconnected
   dimensions = {
-    InstanceName = module.instance[each.value].instance_name
+    InstanceName = module.instance[each.key].instance_name
   }
 
   statistic                 = "SampleCount"
@@ -150,14 +187,14 @@ resource "aws_cloudwatch_metric_alarm" "ssm_agent" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "ecs_agent" {
-  for_each          = var.instance_names
+  for_each          = var.instances
 
-  alarm_name        = "${module.instance[each.value].instance_name}-ecs-agent"
-  alarm_description = "Triggers if AWS has lost connection to the ECS agent on an instance named '${module.instance[each.value].instance_name}' (e.g., due to network outage, instance downtime, etc.)"
+  alarm_name        = "${module.instance[each.key].instance_name}-ecs-agent"
+  alarm_description = "Triggers if AWS has lost connection to the ECS agent on an instance named '${module.instance[each.key].instance_name}' (e.g., due to network outage, instance downtime, etc.)"
   namespace         = module.agent_connectivity.metric_namespace
   metric_name       = module.agent_connectivity.metric_names.ecs_agent_disconnected
   dimensions = {
-    InstanceName = module.instance[each.value].instance_name
+    InstanceName = module.instance[each.key].instance_name
   }
 
   statistic                 = "SampleCount"
