@@ -105,15 +105,19 @@ resource "null_resource" "configure_instance" {
 
   provisioner "remote-exec" {
     inline = [
+      # We ignore any lines of history that have this pattern,
+      # as it will include the user's password.
+      "export HISTIGNORE='*sudo -S -k*'",
+
       # Get dependencies ready
       # This assumes that we're running on RHEL 7 (which Vy hosts are).
-      "sudo subscription-manager repos --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-optional-rpms",
-      "sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm",
+      "echo ${each.value.password} | sudo -S -k subscription-manager repos --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-optional-rpms",
+      "echo ${each.value.password} | sudo -S -k yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm",
 
       # Do the actual install!
       "curl --proto https -o /tmp/ecs-anywhere-install.sh 'https://raw.githubusercontent.com/aws/amazon-ecs-init/v1.53.0-1/scripts/ecs-anywhere-install.sh'",
       "echo '5ea39e5af247b93e77373c35530d65887857b8d14539465fa7132d33d8077c8c  /tmp/ecs-anywhere-install.sh' | sha256sum -c - || exit 1",
-      "sudo bash /tmp/ecs-anywhere-install.sh --region '${data.aws_region.current.name}' --cluster '${var.ecs_cluster_name}' --activation-id '${module.instance[each.key].activation_id}' --activation-code '${module.instance[each.key].activation_code}'"
+      "echo ${each.value.password} | sudo -S -k bash /tmp/ecs-anywhere-install.sh --region '${data.aws_region.current.name}' --cluster '${var.ecs_cluster_name}' --activation-id '${module.instance[each.key].activation_id}' --activation-code '${module.instance[each.key].activation_code}'"
     ]
   }
 }
