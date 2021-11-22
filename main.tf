@@ -9,7 +9,7 @@ terraform {
       version = ">= 3.44.0"
     }
   }
-  required_version = ">= 1.0.0"
+  required_version = ">= 0.13.0"
 }
 
 /*
@@ -20,7 +20,7 @@ terraform {
 module "cloudwatch_agent" {
   for_each            = var.instances
 
-  source              = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=3185875/modules/cloudwatch-agent"
+  source              = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0f2c7bb5/modules/cloudwatch-agent"
 
   name_prefix         = var.name_prefix
   metric_namespace    = var.ecs_cluster_name
@@ -52,7 +52,7 @@ resource "aws_kms_alias" "ssm_activation_encryption_key_alias" {
 module "instance" {
   for_each      = var.instances
 
-  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=3185875"
+  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0f2c7bb5"
 
   name_prefix   = var.name_prefix
   instance_name = each.key
@@ -132,7 +132,7 @@ resource "null_resource" "configure_instance" {
  * == Setup Monitoring for SSM and ECS Agents
  */
 module "agent_connectivity" {
-  source      = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=3185875/modules/agent-connectivity"
+  source      = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0f2c7bb5/modules/agent-connectivity"
 
   name_prefix = var.name_prefix
   tags        = var.tags
