@@ -20,7 +20,7 @@ terraform {
 module "cloudwatch_agent" {
   for_each            = var.instances
 
-  source              = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0f2c7bb5/modules/cloudwatch-agent"
+  source              = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=a37be758/modules/cloudwatch-agent"
 
   name_prefix         = var.name_prefix
   metric_namespace    = var.ecs_cluster_name
@@ -52,7 +52,7 @@ resource "aws_kms_alias" "ssm_activation_encryption_key_alias" {
 module "instance" {
   for_each      = var.instances
 
-  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0f2c7bb5"
+  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=a37be758"
 
   name_prefix   = var.name_prefix
   instance_name = each.key
@@ -93,16 +93,6 @@ module "instance" {
 
 data "aws_region" "current" {}
 
-data "aws_ssm_parameter" "activation_code" {
-  for_each = var.instances
-  name = module.instance[each.key].activation_code_ssm_parameter_name
-}
-
-data "aws_ssm_parameter" "activation_id" {
-  for_each = var.instances
-  name = module.instance[each.key].activation_id_ssm_parameter_name
-}
-
 resource "null_resource" "configure_instance" {
   for_each = var.configure_instances ? var.instances : {}
 
@@ -123,7 +113,7 @@ resource "null_resource" "configure_instance" {
       # Do the actual install!
       "curl --proto https -o /tmp/ecs-anywhere-install.sh 'https://raw.githubusercontent.com/aws/amazon-ecs-init/v1.53.0-1/scripts/ecs-anywhere-install.sh'",
       "echo '5ea39e5af247b93e77373c35530d65887857b8d14539465fa7132d33d8077c8c  /tmp/ecs-anywhere-install.sh' | sha256sum -c - || exit 1",
-      "sudo bash /tmp/ecs-anywhere-install.sh --region '${data.aws_region.current.name}' --cluster '${var.ecs_cluster_name}' --activation-id '${data.aws_ssm_parameter.activation_id[each.key].value}' --activation-code '${data.aws_ssm_parameter.activation_code[each.key].value}'"
+      "sudo bash /tmp/ecs-anywhere-install.sh --region '${data.aws_region.current.name}' --cluster '${var.ecs_cluster_name}' --activation-id '${module.instance[each.key].activation_id}' --activation-code '${module.instance[each.key].activation_code}'"
     ]
   }
 }
@@ -132,7 +122,7 @@ resource "null_resource" "configure_instance" {
  * == Setup Monitoring for SSM and ECS Agents
  */
 module "agent_connectivity" {
-  source      = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0f2c7bb5/modules/agent-connectivity"
+  source      = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=a37be758/modules/agent-connectivity"
 
   name_prefix = var.name_prefix
   tags        = var.tags
