@@ -52,6 +52,7 @@ sudo subscription-manager repos \
   --enable=rhel-7-server-extras-rpms \
   --enable=rhel-7-server-optional-rpms
 sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo yum install docker
 ----
 
 Finally, we'll do the actual installation.
@@ -65,6 +66,7 @@ echo '5ea39e5af247b93e77373c35530d65887857b8d14539465fa7132d33d8077c8c  /tmp/ecs
   | sha256sum -c - \
   || exit 1
 sudo bash /tmp/ecs-anywhere-install.sh \
+  --docker-install-source none \
   --region '<aws-region>' \
   --cluster '<ecs-cluster-name>' \
   --activation-id '<activation-id-from-ssm>' \
