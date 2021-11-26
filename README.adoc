@@ -43,16 +43,31 @@ ssh <username>@<host>
 ----
 
 Now, let's configure and install the relevant dependencies.
-This activates some extra repos from RHEL to allow us to install docker.
+This downloads and sets up docker using the CentOS 7 version.
 
 [source,bash]
 ----
-sudo subscription-manager repos \
-  --enable=rhel-7-server-rpms \
-  --enable=rhel-7-server-extras-rpms \
-  --enable=rhel-7-server-optional-rpms
-sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-sudo yum install docker
+# Install required packages.
+sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+
+# Install container-selinux.
+# Check for latest version: http://mirror.centos.org/centos/7/extras/x86_64/Packages/.
+sudo yum install -y \
+  http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-3.el7.noarch.rpm
+
+# Set up Docker repository.
+sudo yum-config-manager \
+  --add-repo \
+  https://download.docker.com/linux/centos/docker-ce.repo
+
+# Install Docker CE and tools.
+sudo yum install -y \
+  docker-ce \
+  docker-ce-cli \
+  containerd.io
+
 ----
 
 Finally, we'll do the actual installation.

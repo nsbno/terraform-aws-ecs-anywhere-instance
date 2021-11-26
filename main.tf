@@ -111,9 +111,11 @@ resource "null_resource" "configure_instance" {
 
       # Get dependencies ready
       # This assumes that we're running on RHEL 7 (which Vy hosts are).
-      "echo ${each.value.password} | sudo -S -k subscription-manager repos --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-optional-rpms",
+      "echo ${each.value.password} | sudo -S -k yum install -y yum-utils device-mapper-persistent-data lvm2",
+      "echo ${each.value.password} | sudo -S -k yum install -y https://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-3.el7.noarch.rpm",
+      "echo ${each.value.password} | sudo -S -k yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo",
       "echo ${each.value.password} | sudo -S -k yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm",
-      "echo ${each.value.password} | sudo -S -k yum install -y docker",
+      "echo ${each.value.password} | sudo -S -k yum install -y docker-ce docker-ce-cli containerd.io",
 
       # Do the actual install!
       "curl --proto https -o /tmp/ecs-anywhere-install.sh 'https://raw.githubusercontent.com/aws/amazon-ecs-init/v1.53.0-1/scripts/ecs-anywhere-install.sh'",
