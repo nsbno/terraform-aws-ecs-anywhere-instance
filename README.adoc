@@ -47,6 +47,12 @@ This downloads and sets up docker using the CentOS 7 version.
 
 [source,bash]
 ----
+# Enable RHEL repositories that contain some required packages
+sudo subscription-manager repos \
+  --enable=rhel-7-server-rpms \
+  --enable=rhel-7-server-extras-rpms \
+  --enable=rhel-7-server-optional-rpms
+
 # Install required packages.
 sudo yum install -y yum-utils \
   device-mapper-persistent-data \
