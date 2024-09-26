@@ -52,7 +52,7 @@ resource "aws_kms_alias" "ssm_activation_encryption_key_alias" {
 module "instance" {
   for_each      = var.instances
 
-  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0d6c82e"
+  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=4298638"
 
   name_prefix   = var.name_prefix
   instance_name = each.key
