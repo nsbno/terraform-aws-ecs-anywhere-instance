@@ -20,7 +20,7 @@ terraform {
 module "cloudwatch_agent" {
   for_each            = var.instances
 
-  source              = "github.com/nsbno/terraform-aws-ssm-managed-instance//modules/cloudwatch-agent?ref=a37be758"
+  source              = "github.com/nsbno/terraform-aws-ssm-managed-instance//modules/cloudwatch-agent?ref=0d6c82e6"
 
   name_prefix         = var.name_prefix
   metric_namespace    = var.ecs_cluster_name
@@ -52,7 +52,7 @@ resource "aws_kms_alias" "ssm_activation_encryption_key_alias" {
 module "instance" {
   for_each      = var.instances
 
-  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=4298638"
+  source        = "github.com/nsbno/terraform-aws-ssm-managed-instance?ref=0d6c82e6"
 
   name_prefix   = var.name_prefix
   instance_name = each.key
@@ -130,7 +130,7 @@ resource "null_resource" "configure_instance" {
  * == Setup Monitoring for SSM and ECS Agents
  */
 module "agent_connectivity" {
-  source      = "github.com/nsbno/terraform-aws-ssm-managed-instance//modules/agent-connectivity?ref=a37be758"
+  source      = "github.com/nsbno/terraform-aws-ssm-managed-instance//modules/agent-connectivity?ref=0d6c82e6"
 
   name_prefix = var.name_prefix
   tags        = var.tags
